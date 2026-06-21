@@ -27,7 +27,7 @@ function App() {
     setResult(null);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/plan-trip/', formData);
+      const response = await axios.post('https://eld-trip-planner-backend-1.onrender.com/api/plan-trip/', formData);
       setResult(response.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong. Please try again.');
