@@ -1,35 +1,43 @@
-function ELDLogSheet({ day, drivingHours }) {
+import React from 'react';
+
+function ELDLogSheet({ day, drivingHours, isFirstDay, isLastDay, offDutyHours, sleeperBerthHours, onDutyHours }) {
   const statuses = ['Off Duty', 'Sleeper Berth', 'Driving', 'On Duty'];
 
   const statusColors = {
-    'Off Duty': '#3b82f6',       // Blue
-    'Sleeper Berth': '#6b21a8',  // Dark Purple
-    'Driving': '#16a34a',        // Green
-    'On Duty': '#f59e0b',        // Amber
+    'Off Duty': '#3b82f6',
+    'Sleeper Berth': '#7c3aed',
+    'Driving': '#16a34a',
+    'On Duty': '#f59e0b',
   };
 
-  // Build timeline segments
+  const dHours = parseFloat(drivingHours) || 0.0;
+  const sHours = parseFloat(sleeperBerthHours) !== undefined ? parseFloat(sleeperBerthHours) : (!isLastDay ? 8.0 : 0.0);
+  const oDuty = parseFloat(onDutyHours) !== undefined ? parseFloat(onDutyHours) : (isFirstDay ? 2.0 : (isLastDay ? 1.0 : 0.0));
+  const offDuty = parseFloat(offDutyHours) !== undefined ? parseFloat(offDutyHours) : (24.0 - (dHours + sHours + oDuty));
+
   const segments = [];
   let hour = 0;
 
-  segments.push({ status: 'On Duty', start: hour, end: hour + 1 });
-  hour += 1;
+  if (oDuty > 0) {
+    segments.push({ status: 'On Duty', start: hour, end: hour + oDuty });
+    hour += oDuty;
+  }
 
-  segments.push({ status: 'Driving', start: hour, end: hour + drivingHours });
-  hour += drivingHours;
+  if (dHours > 0) {
+    segments.push({ status: 'Driving', start: hour, end: hour + dHours });
+    hour += dHours;
+  }
 
-  segments.push({ status: 'On Duty', start: hour, end: hour + 1 });
-  hour += 1;
+  if (sHours > 0) {
+    segments.push({ status: 'Sleeper Berth', start: hour, end: hour + sHours });
+    hour += sHours;
+  }
 
   if (hour < 24) {
     segments.push({ status: 'Off Duty', start: hour, end: 24 });
   }
 
-  // Calculate totals per status (for badges)
-  const totals = { 'Off Duty': 0, 'Sleeper Berth': 0, 'Driving': 0, 'On Duty': 0 };
-  segments.forEach((seg) => {
-    totals[seg.status] += seg.end - seg.start;
-  });
+  const totals = { 'Off Duty': offDuty, 'Sleeper Berth': sHours, 'Driving': dHours, 'On Duty': oDuty };
 
   const statusRowIndex = {
     'Off Duty': 0,
@@ -39,18 +47,18 @@ function ELDLogSheet({ day, drivingHours }) {
   };
 
   const cellWidth = 25;
-  const rowHeight = 32;
-  const labelWidth = 110;
+  const rowHeight = 36;
+  const labelWidth = 120;
   const chartHeight = 4 * rowHeight;
   const chartWidth = 24 * cellWidth;
 
   return (
-    <div style={styles.card}>
-      <div style={styles.cardHeader}>
-        <h4 style={styles.cardTitle}>Daily Log Sheet — Day {day}</h4>
-        <div style={styles.badgeRow}>
+    <div className="eld-card">
+      <div className="eld-header">
+        <h4 className="eld-title">Daily Log Sheet — Day {day}</h4>
+        <div className="badge-row">
           {statuses.map((status) => (
-            <span key={status} style={{ ...styles.badge, backgroundColor: statusColors[status] }}>
+            <span key={status} className="badge" style={{ backgroundColor: statusColors[status] }}>
               {status}: {totals[status].toFixed(1)} hrs
             </span>
           ))}
@@ -58,118 +66,122 @@ function ELDLogSheet({ day, drivingHours }) {
       </div>
 
       <div style={{ overflowX: 'auto' }}>
-        <svg width={labelWidth + chartWidth + 20} height={chartHeight + 50}>
-          {/* Row labels */}
+        <svg width={labelWidth + chartWidth + 20} height={chartHeight + 60}>
           {statuses.map((status, i) => (
             <text
               key={status}
               x="0"
-              y={30 + i * rowHeight + rowHeight / 2 + 4}
+              y={35 + i * rowHeight + rowHeight / 2 + 4}
               fontSize="12"
-              fill="#374151"
-              fontWeight="500"
+              fill="#475569"
+              fontWeight="600"
             >
               {status}
             </text>
           ))}
 
-          {/* Vertical grid lines (every hour) */}
+          {statuses.map((_, i) => (
+            <rect
+              key={`bg-${i}`}
+              x={labelWidth}
+              y={25 + i * rowHeight}
+              width={chartWidth}
+              height={rowHeight}
+              fill={i % 2 === 0 ? '#f8fafc' : '#ffffff'}
+            />
+          ))}
+
           {Array.from({ length: 25 }).map((_, h) => (
             <line
               key={`v-${h}`}
               x1={labelWidth + h * cellWidth}
-              y1={20}
+              y1={25}
               x2={labelWidth + h * cellWidth}
-              y2={20 + chartHeight}
-              stroke={h % 6 === 0 ? '#9ca3af' : '#e5e7eb'}
-              strokeWidth={h % 6 === 0 ? 1.2 : 0.7}
+              y2={25 + chartHeight}
+              stroke={h % 6 === 0 ? '#94a3b8' : '#e2e8f0'}
+              strokeWidth={h % 6 === 0 ? 1.5 : 0.8}
             />
           ))}
 
-          {/* Horizontal grid lines (rows) */}
           {Array.from({ length: 5 }).map((_, i) => (
             <line
               key={`h-${i}`}
               x1={labelWidth}
-              y1={20 + i * rowHeight}
+              y1={25 + i * rowHeight}
               x2={labelWidth + chartWidth}
-              y2={20 + i * rowHeight}
-              stroke="#e5e7eb"
-              strokeWidth="0.7"
+              y2={25 + i * rowHeight}
+              stroke="#e2e8f0"
+              strokeWidth="0.8"
             />
           ))}
 
-          {/* Hour labels */}
           {Array.from({ length: 25 }).map((_, h) => (
-            <text key={`t-${h}`} x={labelWidth - 5 + h * cellWidth} y="14" fontSize="9" fill="#6b7280">
+            <text
+              key={`t-${h}`}
+              x={labelWidth + h * cellWidth}
+              y="18"
+              fontSize="10"
+              fill="#64748b"
+              textAnchor="middle"
+            >
               {h}
             </text>
           ))}
 
-          {/* Colored status line */}
           {segments.map((seg, idx) => {
-            const y = 20 + statusRowIndex[seg.status] * rowHeight + rowHeight / 2;
+            const y = 25 + statusRowIndex[seg.status] * rowHeight + rowHeight / 2;
             const x1 = labelWidth + seg.start * cellWidth;
             const x2 = labelWidth + seg.end * cellWidth;
             const color = statusColors[seg.status];
             return (
               <g key={idx}>
-                <line x1={x1} y1={y} x2={x2} y2={y} stroke={color} strokeWidth="3" strokeLinecap="round" />
-                {/* Vertical connector to next segment */}
+                <rect
+                  x={x1}
+                  y={25 + statusRowIndex[seg.status] * rowHeight + 4}
+                  width={x2 - x1}
+                  height={rowHeight - 8}
+                  fill={color}
+                  opacity="0.15"
+                  rx="3"
+                />
+                <line
+                  x1={x1} y1={y}
+                  x2={x2} y2={y}
+                  stroke={color}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
                 {idx < segments.length - 1 && (
                   <line
                     x1={x2}
                     y1={y}
                     x2={x2}
-                    y2={20 + statusRowIndex[segments[idx + 1].status] * rowHeight + rowHeight / 2}
-                    stroke="#9ca3af"
+                    y2={25 + statusRowIndex[segments[idx + 1].status] * rowHeight + rowHeight / 2}
+                    stroke="#94a3b8"
                     strokeWidth="1.5"
-                    strokeDasharray="2,2"
+                    strokeDasharray="3,3"
                   />
                 )}
               </g>
             );
           })}
+
+          {['Midnight', '6 AM', 'Noon', '6 PM', 'Midnight'].map((label, i) => (
+            <text
+              key={label}
+              x={labelWidth + i * 6 * cellWidth}
+              y={25 + chartHeight + 18}
+              fontSize="10"
+              fill="#94a3b8"
+              textAnchor="middle"
+            >
+              {label}
+            </text>
+          ))}
         </svg>
       </div>
     </div>
   );
 }
-
-const styles = {
-  card: {
-    background: '#ffffff',
-    borderRadius: '8px',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
-    padding: '18px 20px',
-    marginBottom: '20px',
-  },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '10px',
-    marginBottom: '12px',
-  },
-  cardTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#4b5563',
-    margin: 0,
-  },
-  badgeRow: {
-    display: 'flex',
-    gap: '6px',
-    flexWrap: 'wrap',
-  },
-  badge: {
-    color: 'white',
-    fontSize: '11px',
-    fontWeight: '600',
-    padding: '3px 8px',
-    borderRadius: '12px',
-  },
-};
 
 export default ELDLogSheet;
